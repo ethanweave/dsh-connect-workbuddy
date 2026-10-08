@@ -1,37 +1,70 @@
 # 腾讯CodeBuddy网关管家-Windows版
 
-> [!TIP]
-> **WorkBuddy Gateway Windows Suite** —— 让 [workbuddy-gateway](https://github.com/CangShui/workbuddy-gateway)
-> 在 Windows 上**开机自启、一键安装、统一管理** 的 PowerShell 套件。
+> **一句话：让你在 DSH 里免费白嫖腾讯 CodeBuddy（WorkBuddy）的模型额度。**
 
-一套让 [workbuddy-gateway](https://github.com/CangShui/workbuddy-gateway) 在 Windows 上
-**开机自启、一键安装、统一管理** 的 PowerShell 套件。
+[DSH（DeepSeek Harness）](https://github.com/ethanweave/dsh-desktop) 本身是一个 AI 编程前端，
+它需要你配置一个模型提供商；而本项目的思路是：**用你自己的腾讯 CodeBuddy（WorkBuddy）账号额度
+作为这个提供商** —— 账号里自带的每月额度 + 免费模型，从此在 DSH 里随便用，不花一分钱 API 费。
 
-上游项目（Go 单二进制）负责网关本身；本仓库不复制、不修改上游代码，
-只补齐 Windows 桌面场景缺失的部分：
+## 它是怎么工作的（3 步看懂）
+
+```text
+┌─────────┐      ┌──────────────────────┐      ┌─────────────────────┐
+│   DSH   │ ───► │  本项目（本机网关）   │ ───► │ 腾讯 CodeBuddy 额度  │
+│ 写代码   │      │  127.0.0.1:8317      │      │ （你自己的账号）     │
+└─────────┘      └──────────────────────┘      └─────────────────────┘
+```
+
+1. **DSH 发起请求** → 发到本机 `127.0.0.1:8317`（OpenAI 兼容格式）
+2. **本机网关中转** → 把请求翻译成 CodeBuddy 协议，用你已登录的账号调用上游
+3. **额度扣在 CodeBuddy** → DSH 那边不需要任何 API Key / 充值 / 订阅
+
+所以整个链路是：**DSH → 本项目网关 → CodeBuddy 额度 → 上游模型**，
+你的 API 费用 = 0，消耗的是 CodeBuddy 账号本身的额度（含免费模型）。
+
+> [!NOTE]
+> 网关本体来自上游 [CangShui/workbuddy-gateway](https://github.com/CangShui/workbuddy-gateway)
+> （Go 编写，单二进制）。本项目是它的 **Windows 增强套件**：一键安装、开机自启、统一管理，
+> 让上面这条链路在 Windows 上开机即用、全程无感。
+
+## 为什么需要本项目（而不是只装上游）
+
+上游网关是个命令行程序，装完还要手动启动。本项目补齐 Windows 场景：
 
 | 能力 | 说明 |
 | --- | --- |
-| 一键安装 | 自动下载指定版本的官方二进制，校验 SHA256，写入 `%USERPROFILE%\workbuddy-gateway` |
-| 登录自启 | 注册计划任务 `WorkBuddy Gateway`，用户登录后拉起网关；启动前先探测 `/v1/models` 防重复 |
-| 统一管理 | `manage.ps1` 子命令：`status / start / stop / restart / logs / update / uninstall` |
-| 健康检查 | `Test-GatewayHealth` 可独立复用；`status` 输出进程、任务、端口、HTTP 四层状态 |
-| 安全默认 | 凭据文件永不入库；可选 API Key；默认仅监听 `127.0.0.1` |
+| 一键安装 | 自动下载官方二进制 + SHA256 校验，写入 `%USERPROFILE%\workbuddy-gateway` |
+| 登录自启 | 注册计划任务 `WorkBuddy Gateway`，开机后自动拉起网关，防重复启动 |
+| 统一管理 | `manage.ps1`：`status / start / stop / restart / logs / update / uninstall` |
+| 健康检查 | 任务 / 进程 / 端口 / HTTP 四层状态一目了然 |
+| 安全默认 | 凭据永不入库；默认仅监听 `127.0.0.1`；可选 API Key |
 
 ## 快速开始
 
 ```powershell
-# 1. 安装（默认最新 release，可选 -Version v1.13.16、-Port 8317）
+# 1. 安装（自动下载官方二进制并校验）
 .\scripts\install.ps1
 
-# 2. 登录（扫码或浏览器验证，凭据写在安装目录，勿外传）
+# 2. 登录你的腾讯 CodeBuddy / WorkBuddy 账号（扫码或浏览器验证）
 & "$env:USERPROFILE\workbuddy-gateway\workbuddy-gateway.exe" login
 
-# 3. 完成。重启后自动运行；或立即手动启动
+# 3. 启动网关（之后开机自启，无需再管）
 .\scripts\manage.ps1 start
 ```
 
-验证：浏览器打开 `http://127.0.0.1:8317/v1/models`，返回 `200` 即成功。
+然后在 **DSH → 设置 → 提供商** 里填：
+
+| 设置 | 值 |
+| --- | --- |
+| 协议 | OpenAI 兼容 |
+| Base URL | `http://127.0.0.1:8317/v1` |
+| API Key | 随意填（网关默认不校验） |
+| 模型 | 打开 <http://127.0.0.1:8317/v1/models> 复制任意 ID |
+
+完成。在 DSH 里发起对话，模型响应来自你的 CodeBuddy 额度。
+
+> Cherry Studio / Chatbox 等其他 OpenAI 兼容客户端同样适用，
+> 详见 [docs/clients.zh-CN.md](docs/clients.zh-CN.md)。
 
 ## 管理命令
 
@@ -40,22 +73,10 @@
 .\scripts\manage.ps1 start      # 启动计划任务（等效开机自启路径）
 .\scripts\manage.ps1 stop       # 停止任务并结束进程
 .\scripts\manage.ps1 restart    # 先 stop 再 start
-.\scripts\manage.ps1 logs       # 尾部查看今日网关日志（-Lines 200）
-.\scripts\manage.ps1 update     # 下载并替换二进制后自动 restart
+.\scripts\manage.ps1 logs       # 查看网关日志（-Lines 200）
+.\scripts\manage.ps1 update     # 升级二进制并自动重启
 .\scripts\manage.ps1 uninstall  # 停止 + 删除任务 + 删除安装目录（-Force 跳过确认）
 ```
-
-## 客户端接入（OpenAI 兼容）
-
-| 设置 | 值 |
-| --- | --- |
-| 协议 | OpenAI Chat Completions 兼容（另有 Anthropic `/v1/messages` 入口） |
-| Base URL | `http://127.0.0.1:8317/v1` |
-| API Key | 默认不校验；在 `config.json` 开启 `apiKeyEnabled` 后填写 |
-| 模型 | 以 `GET /v1/models` 实时返回为准 |
-
-DSH / Cherry Studio / Chatbox 等客户端的逐步接入说明见
-[docs/clients.zh-CN.md](docs/clients.zh-CN.md)。
 
 ## 目录结构
 
@@ -64,20 +85,35 @@ scripts/install.ps1            一键安装（下载 + 校验 + 计划任务）
 scripts/manage.ps1             日常管理入口
 scripts/gateway-task.ps1       计划任务实际执行的自启脚本
 scripts/common.ps1             共享函数库（路径 / 日志 / 健康检查）
-docs/clients.zh-CN.md          客户端接入指南（DSH 等）
+docs/clients.zh-CN.md          客户端接入指南（DSH / Cherry Studio / Chatbox）
 docs/troubleshooting.zh-CN.md  常见问题排查
 ```
+
+## 常见疑问
+
+**Q：真的免费吗？**
+A：消耗的是你腾讯 CodeBuddy / WorkBuddy 账号自带的额度（部分模型完全免费），
+不产生任何新的 API 费用。额度用完或账号受限时，以账号实际状态为准。
+
+**Q：需要管理员权限吗？**
+A：不需要。计划任务以当前用户身份注册和运行。
+
+**Q：DSH 和网关必须同一台电脑吗？**
+A：是的。网关只监听 `127.0.0.1`，这是刻意的安全默认；跨机访问需自行设计网络与鉴权。
+
+**Q：聊天报认证错误？**
+A：先跑 `workbuddy-gateway.exe status` 看账号状态，失效就重新 `login`，其余见
+[docs/troubleshooting.zh-CN.md](docs/troubleshooting.zh-CN.md)。
 
 ## 安全须知
 
 - `workbuddy.json` 是真实登录凭据，**切勿**提交仓库、粘贴聊天或上传网盘。
-- 网关默认只监听回环地址；不要为远程访问直接改成 `0.0.0.0`，需要时用
-  防火墙 + `config.json` 的 API Key 另行设计。
-- 计划任务以当前用户身份运行，无需管理员权限。
+- 不要为远程访问直接把监听改成 `0.0.0.0`，需要时用防火墙 + API Key 另行设计。
+- 请遵守上游服务条款；本项目不提供任何绕过额度限制的能力。
 
 ## 相关链接
 
-- 上游项目与完整功能说明：[CangShui/workbuddy-gateway](https://github.com/CangShui/workbuddy-gateway)
+- 上游网关与完整功能说明：[CangShui/workbuddy-gateway](https://github.com/CangShui/workbuddy-gateway)
 - 本套件问题反馈：[Issues](../../issues)
 
 ## License
