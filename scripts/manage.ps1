@@ -73,16 +73,17 @@ switch ($Action) {
             return
         }
         Write-Host "--- $picked (last $Lines lines) ---" -ForegroundColor Cyan
-        Get-Content -LiteralPath $picked -Tail $Lines
+        # Gateway logs are UTF-8 without BOM; PS 5.1 would otherwise read them as ANSI.
+        Get-Content -LiteralPath $picked -Tail $Lines -Encoding UTF8
     }
 
     'update' {
         Write-Host 'Updating binary via installer (task/config are preserved)...'
         $install = Join-Path $PSScriptRoot 'install.ps1'
         if ($Version -eq 'latest') {
-            & $install
+            & $install -Force
         } else {
-            & $install -Version $Version
+            & $install -Version $Version -Force
         }
         Write-Host 'Restarting gateway...'
         if (Start-Gateway) {

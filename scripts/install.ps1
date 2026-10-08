@@ -5,6 +5,7 @@
 param(
     [string]$Version = 'latest',
     [int]$Port = 8317,
+    [switch]$Force,
     [switch]$NoTask
 )
 
@@ -21,33 +22,35 @@ Write-Host "    Version     : $Version"
 Write-Host "    Port        : $Port"
 
 # --- 0. Already installed? --------------------------------------------------
-if (Test-GatewayHealth) {
+if (-not $Force -and (Test-GatewayHealth)) {
     Write-Host "==> Gateway already responds on port $Port; nothing to install." -ForegroundColor Yellow
     Write-Host "    Use manage.ps1 update to upgrade the binary."
     return
 }
 
 # --- 1. Resolve the release version ----------------------------------------
-Write-Host "==> Resolving release..." -ForegroundColor Cyan
-$headers = @{ 'User-Agent' = 'workbuddy-gateway-windows-installer' }
-$relUrl = "https://api.github.com/repos/$upstreamRepo/releases"
-if ($Version -eq 'latest') { $relUrl += '/latest' } else { $relUrl += "/tags/$Version" }
-$release = Invoke-RestMethod -Uri $relUrl -Headers $headers
-$tag = $release.tag_name
-Write-Host "    Resolved: $tag"
+# Direct download URLs only (no GitHub API): anonymous API calls are tightly
+# rate-limited, while release asset downloads are not.
+Write-Host "==> Downloading from upstream releases ($Version)..." -ForegroundColor Cyan
+$base = "https://github.com/$upstreamRepo/releases"
+if ($Version -eq 'latest') {
+    $dlBase = "$base/latest/download"
+    $tag = 'latest'
+} else {
+    $dlBase = "$base/download/$Version"
+    $tag = $Version
+}
 
 # --- 2. Download binary + SHA256SUMS ----------------------------------------
 $dlDir = Join-Path $env:TEMP "workbuddy-gateway-install-$tag"
 New-Item -ItemType Directory -Path $dlDir -Force | Out-Null
-$asset = $release.assets | Where-Object { $_.name -eq $assetName } | Select-Object -First 1
-if (-not $asset) { throw "Asset $assetName not found in release $tag." }
 
 $exeTmp = Join-Path $dlDir $assetName
 $sumsTmp = Join-Path $dlDir 'SHA256SUMS'
-Write-Host "==> Downloading $($asset.name) ($([Math]::Round($asset.size / 1MB, 1)) MB)..." -ForegroundColor Cyan
-Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $exeTmp -UseBasicParsing
-Invoke-WebRequest -Uri "$($release.browser_download_url -replace '/[^/]+$', '')/SHA256SUMS" `
-    -OutFile $sumsTmp -UseBasicParsing
+Write-Host "==> Downloading $assetName..." -ForegroundColor Cyan
+Invoke-WebRequest -Uri "$dlBase/$assetName" -OutFile $exeTmp -UseBasicParsing
+Invoke-WebRequest -Uri "$dlBase/SHA256SUMS" -OutFile $sumsTmp -UseBasicParsing
+Write-Host "    Downloaded ($([Math]::Round((Get-Item $exeTmp).Length / 1MB, 1)) MB)"
 
 # --- 3. Verify checksum ------------------------------------------------------
 Write-Host "==> Verifying SHA256..." -ForegroundColor Cyan
