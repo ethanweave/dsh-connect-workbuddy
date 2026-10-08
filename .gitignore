@@ -1,0 +1,14 @@
+# 凭据与本地状态：绝不入库
+workbuddy.json
+workbuddy*.json
+config.json
+logs/
+*.log
+
+# 上游二进制不随仓库分发，请从官方 Releases 下载
+workbuddy-gateway.exe
+*.exe
+
+# 系统杂物
+Thumbs.db
+.DS_Store

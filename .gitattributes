@@ -1,0 +1,5 @@
+# Normalize line endings: CRLF in working tree for Windows scripts, LF in repo
+* text=auto
+*.ps1 text eol=crlf
+*.md text eol=lf
+*.json text eol=lf
