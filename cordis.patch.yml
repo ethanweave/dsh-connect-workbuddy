@@ -1,0 +1,4 @@
+# workbuddy-gateway-dsh bundle layer: register the gateway onboarding skill.
+- insert:
+    - id: workbuddy-gateway
+      name: workbuddy-gateway-dsh

@@ -41,6 +41,17 @@
 
 ## 快速开始
 
+**方式一：作为 DSH 插件安装（推荐）**
+
+```powershell
+dsh plugin add github:ethanweave/workbuddy-gateway-dsh
+```
+
+安装后直接对 Agent 说「帮我接入 WorkBuddy 网关」，它会按内置技能完成
+安装、启动、排障，并指导你配置 DSH 提供商。
+
+**方式二：直接使用脚本**
+
 ```powershell
 # 1. 安装（自动下载官方二进制并校验）
 .\scripts\install.ps1
