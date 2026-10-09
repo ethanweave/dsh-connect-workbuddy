@@ -1,11 +1,11 @@
 {
-  "name": "workbuddy-gateway-dsh",
+  "name": "dsh-connect-workbuddy",
   "version": "1.0.0",
   "description": "Use your Tencent CodeBuddy (WorkBuddy) account quota inside DSH: a local OpenAI-compatible gateway with one-shot install, logon autostart and unified management.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ethanweave/workbuddy-gateway-dsh.git"
+    "url": "git+https://github.com/ethanweave/dsh-connect-workbuddy.git"
   },
   "keywords": [
     "dsh",

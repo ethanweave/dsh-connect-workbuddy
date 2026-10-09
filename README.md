@@ -44,7 +44,7 @@
 **方式一：作为 DSH 插件安装（推荐）**
 
 ```powershell
-dsh plugin add github:ethanweave/workbuddy-gateway-dsh
+dsh plugin add github:ethanweave/dsh-connect-workbuddy
 ```
 
 安装后直接对 Agent 说「帮我接入 WorkBuddy 网关」，它会按内置技能完成
