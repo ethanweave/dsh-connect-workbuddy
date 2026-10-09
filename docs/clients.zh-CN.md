@@ -32,6 +32,56 @@
 5. 保存后发起一次对话验证。模型目录能返回 200 不代表聊天一定成功；
    聊天报认证错误时先执行 `workbuddy-gateway.exe status` 检查账号状态。
 
+### 解锁思考强度与完整上下文（推荐）
+
+DSH 默认按通用 OpenAI 端点对待未知模型：上下文按保守值估算，且不提供
+思考强度选择器。网关本身**完整支持** `reasoning_effort` 透传（含
+CodeBuddy 的 Max 模式，即 `effort: max`），在 DSH 的提供商配置里为模型
+声明 `reasoningEfforts` 与 `contextWindow` 即可解锁：
+
+```yaml
+llm-pi-ai:
+  providers:
+    workbuddy:
+      api: openai-completions
+      baseURL: http://127.0.0.1:8317/v1
+      defaultContextWindow: 1000000
+      defaultMaxTokens: 64000
+      models:
+        - id: glm-5.3-flash
+          name: GLM-5.3 Flash
+          contextWindow: 1000000
+          reasoningEfforts:
+            off:
+            low: low
+            high: high
+            max: max        # CodeBuddy 的 Max 模式
+        - id: deepseek-v4-pro
+          name: DeepSeek V4 Pro
+          contextWindow: 1000000
+          reasoningEfforts:
+            off:
+            high: high
+```
+
+声明后：
+
+- 会话中可随时切换思考强度：`off / low / medium / high / max`（每个模型
+  支持的档位不同，按上游目录声明即可）；
+- 上下文窗口按 1M 计，不再被默认 200k 截断。
+
+各模型档位参考（来源：CodeBuddy 官方模型目录）：
+
+| 模型 | 思考档位 | 上下文 |
+| --- | --- | --- |
+| `glm-5.3-flash` / `glm-5.3-flashx` | off / low / high / **max** | 1M |
+| `glm-5.3`、`glm-5.2`、`hy3`、`kimi-k3-2` 等 | off / medium / high | 192k–1M |
+| `deepseek-v4-pro`、`hy4-preview` | off / high（强制思考） | 1M |
+
+> 形如 `hy4-preview-x` 的 `-x` 变体与基础模型同价同档，只是客户端强制
+> 思考的开关表现不同；部分账号层级对 `-x`/`-exclusive` ID 返回
+> `11102 model service not found`，遇到时改用基础 ID 即可。
+
 ## Cherry Studio
 
 1. 设置 → 模型服务 → 添加，提供商类型选 **OpenAI**。
